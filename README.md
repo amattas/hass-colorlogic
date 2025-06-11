@@ -5,17 +5,38 @@ Home Assistant integration for Hayward ColorLogic pool lights
 - Control ColorLogic lights through Home Assistant
 - Support for all 17 ColorLogic modes (10 fixed colors + 7 light shows)
 - Automatic mode tracking when manually toggling the switch
-- Reset button to sync the light back to mode 1 (Voodoo Lounge)
+- Separate entities for different control needs:
+  - Switch entity for simple on/off control
+  - Light entity for color/mode selection
+  - Next button to cycle through modes
+  - Reset button to sync back to mode 1 (Voodoo Lounge)
 - Protection timers to ensure reliable operation
+- Buttons automatically disable during mode changes and startup
 - Default mode is Voodoo Lounge (show mode) when first powered on
 
 ## Installation
 
 1. Copy the `custom_components/colorlogic` folder to your Home Assistant `config/custom_components/` directory
-2. Add the configuration to your `configuration.yaml`
-3. Restart Home Assistant
+2. Restart Home Assistant
+3. Configure using the UI or YAML
 
 ## Configuration
+
+### Option 1: UI Configuration (Recommended)
+
+1. Go to Settings → Devices & Services
+2. Click "+ Add Integration"
+3. Search for "Hayward ColorLogic"
+4. Select the switch entity that controls your pool light
+5. Give it a name (e.g., "Pool Light")
+
+This will automatically create:
+- `light.pool_light` - Full color control
+- `switch.pool_light_power` - Simple on/off
+- `button.pool_light_next_color` - Cycle through modes
+- `button.pool_light_reset` - Reset to mode 1
+
+### Option 2: YAML Configuration
 
 ```yaml
 # configuration.yaml
@@ -27,7 +48,12 @@ light:
 button:
   - platform: colorlogic
     entity_id: light.pool_light  # References the light entity created above (NOT the switch)
-    name: "Pool Light"           # This creates button.pool_light_reset
+    name: "Pool Light"           # This creates button.pool_light_reset and button.pool_light_next_color
+
+switch:
+  - platform: colorlogic
+    entity_id: light.pool_light  # References the light entity created above
+    name: "Pool Light"           # This creates switch.pool_light_power (on/off only)
 ```
 
 ## Lovelace Card Configuration
@@ -59,8 +85,12 @@ For a more compact view with all controls:
 ```yaml
 type: entities
 entities:
+  - entity: switch.pool_light_power
+    name: Power On/Off
   - entity: light.pool_light
-    name: Pool Light
+    name: Color Control
+  - entity: button.pool_light_next_color
+    name: Next Color/Mode
   - entity: button.pool_light_reset
     name: Reset to Voodoo Lounge
 title: Pool Light Control
@@ -130,6 +160,15 @@ Reset the light to mode 1 (Voodoo Lounge). This process takes about 3 minutes.
 
 ```yaml
 service: colorlogic.reset
+data:
+  entity_id: light.pool_light
+```
+
+### colorlogic.next_mode
+Advance to the next ColorLogic mode/color.
+
+```yaml
+service: colorlogic.next_mode
 data:
   entity_id: light.pool_light
 ```

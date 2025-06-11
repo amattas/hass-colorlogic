@@ -1,0 +1,38 @@
+{
+  "title": "Hayward ColorLogic",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure ColorLogic Light",
+        "description": "Set up a Hayward ColorLogic light by selecting the switch that controls it.",
+        "data": {
+          "entity_id": "Pool Light Switch",
+          "name": "Light Name"
+        },
+        "data_description": {
+          "entity_id": "Select the existing switch entity that controls your ColorLogic light",
+          "name": "Name for the ColorLogic light (will create light, switch, and button entities)"
+        }
+      }
+    },
+    "error": {
+      "switch_not_found": "The selected switch entity was not found",
+      "not_a_switch": "The selected entity is not a switch",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This switch is already configured for ColorLogic"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ColorLogic Options",
+        "description": "Adjust settings for your ColorLogic light.",
+        "data": {
+          "name": "Light Name"
+        }
+      }
+    }
+  }
+}

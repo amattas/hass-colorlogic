@@ -15,6 +15,7 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, CONF_ENTITY_ID
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
@@ -69,21 +70,34 @@ async def async_setup_platform(
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None
 ) -> None:
-    """Set up the Hayward ColorLogic Light platform."""
+    """Set up the Hayward ColorLogic Light platform from YAML."""
     entity_id = config[CONF_ENTITY_ID]
     name = config[CONF_NAME]
     
     async_add_entities([HaywardColorLogicLight(hass, name, entity_id)], True)
 
 
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the Hayward ColorLogic Light platform from config entry."""
+    entity_id = config_entry.data[CONF_ENTITY_ID]
+    name = config_entry.data[CONF_NAME]
+    
+    async_add_entities([HaywardColorLogicLight(hass, name, entity_id, config_entry.entry_id)], True)
+
+
 class HaywardColorLogicLight(LightEntity, RestoreEntity):
     """Representation of a Hayward ColorLogic Light."""
 
-    def __init__(self, hass: HomeAssistant, name: str, switch_entity_id: str) -> None:
+    def __init__(self, hass: HomeAssistant, name: str, switch_entity_id: str, entry_id: str | None = None) -> None:
         """Initialize the light."""
         self.hass = hass
         self._name = name
         self._switch_entity_id = switch_entity_id
+        self._entry_id = entry_id
         self._is_on = False
         self._current_mode = 1  # Default to voodoo_lounge (show mode)
         self._rgb_color = None  # No RGB for show modes
@@ -321,6 +335,11 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
             _LOGGER.warning("Cannot change color/mode while already changing modes")
             return
         
+        # Check if light is available (handles both mode changes and startup timer)
+        if not self.available:
+            _LOGGER.warning("Light is not available for changes")
+            return
+        
         # If light is being turned on (not already on), record the time
         if not self._is_on:
             self._last_on_time = time.time()
@@ -402,6 +421,11 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
     async def _change_to_mode(self, target_mode: int) -> None:
         """Change to a specific ColorLogic mode."""
         if target_mode == self._current_mode:
+            return
+        
+        # Double-check we're not already changing
+        if self._is_changing_mode:
+            _LOGGER.warning("Already changing modes, ignoring request")
             return
             
         self._is_changing_mode = True
@@ -522,4 +546,26 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
                 return
             
         await self._reset_to_mode_1()
+        self.async_write_ha_state()
+    
+    async def next_mode(self) -> None:
+        """Advance to the next ColorLogic mode."""
+        if self._is_changing_mode:
+            _LOGGER.warning("Cannot advance mode while already changing modes")
+            return
+        
+        if not self.available:
+            _LOGGER.warning("Light is not available for changes")
+            return
+        
+        # Check 60-second startup timer
+        if self._last_on_time and self._is_on:
+            elapsed = time.time() - self._last_on_time
+            if elapsed < 60:
+                _LOGGER.warning("Cannot change mode within 60 seconds of turning on (%.1f seconds elapsed)", elapsed)
+                return
+        
+        # Calculate next mode
+        next_mode = (self._current_mode % 17) + 1
+        await self._change_to_mode(next_mode)
         self.async_write_ha_state()

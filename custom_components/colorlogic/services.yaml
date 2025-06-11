@@ -45,3 +45,15 @@ reset:
       selector:
         entity:
           domain: light
+
+next_mode:
+  name: Next ColorLogic Mode
+  description: Advance the ColorLogic light to the next mode/color
+  fields:
+    entity_id:
+      name: Entity
+      description: Name of the ColorLogic light entity
+      required: true
+      selector:
+        entity:
+          domain: light
