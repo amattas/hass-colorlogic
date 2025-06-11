@@ -1,0 +1,10 @@
+
+{
+  "domain": "colorlogic",
+  "name": "Hayward ColorLogic",
+  "documentation": "https://github.com/yourusername/hayward-colorlogic",
+  "requirements": [],
+  "codeowners": ["@yourusername"],
+  "version": "1.0.0",
+  "iot_class": "local_polling"
+}

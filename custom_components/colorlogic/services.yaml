@@ -1,0 +1,35 @@
+set_mode:
+  name: Set ColorLogic Mode
+  description: Set the ColorLogic light to a specific mode
+  fields:
+    entity_id:
+      name: Entity
+      description: Name of the ColorLogic light entity
+      required: true
+      selector:
+        entity:
+          domain: light
+    mode:
+      name: Mode
+      description: The mode to set
+      required: true
+      selector:
+        select:
+          options:
+            - voodoo_lounge
+            - deep_blue_sea
+            - royal_blue
+            - afternoon_skies
+            - aqua_green
+            - emerald
+            - cloud_white
+            - warm_red
+            - flamingo
+            - vivid_violet
+            - sangria
+            - twilight
+            - tranquility
+            - gemstone
+            - usa
+            - mardi_gras
+            - cool_cabaret
