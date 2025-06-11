@@ -22,15 +22,17 @@ Home Assistant integration for Hayward ColorLogic pool lights
 light:
   - platform: colorlogic
     entity_id: switch.pool_light_switch  # Your existing pool light switch
-    name: "Pool Light"
+    name: "Pool Light"                   # This creates light.pool_light
 
 button:
   - platform: colorlogic
-    entity_id: light.pool_light  # References the light entity created above
-    name: "Pool Light"
+    entity_id: light.pool_light  # References the light entity created above (NOT the switch)
+    name: "Pool Light"           # This creates button.pool_light_reset
 ```
 
-## Lovelace Card with Favorite Colors
+## Lovelace Card Configuration
+
+### Option 1: Light Entity Card with Favorite Colors
 
 To show only the 10 supported ColorLogic colors in the UI, add this to your Lovelace dashboard:
 
@@ -47,6 +49,44 @@ favorite_colors:
   - rgb_color: [233, 36, 50]    # Warm Red
   - rgb_color: [240, 90, 124]   # Flamingo
   - rgb_color: [166, 59, 120]   # Vivid Violet/Sangria
+```
+
+### Option 2: Entities Card with Color Buttons
+
+For a more compact view with all controls:
+
+```yaml
+type: entities
+entities:
+  - entity: light.pool_light
+    name: Pool Light
+  - entity: button.pool_light_reset
+    name: Reset to Voodoo Lounge
+title: Pool Light Control
+```
+
+### Option 3: Custom Button Card (requires custom:button-card)
+
+Create individual buttons for each color:
+
+```yaml
+type: grid
+columns: 5
+cards:
+  - type: custom:button-card
+    entity: light.pool_light
+    name: Deep Blue
+    tap_action:
+      action: call-service
+      service: light.turn_on
+      service_data:
+        entity_id: light.pool_light
+        rgb_color: [20, 76, 135]
+    styles:
+      card:
+        - background-color: 'rgb(20, 76, 135)'
+        - color: white
+  # Repeat for other colors...
 ```
 
 ## Supported Modes

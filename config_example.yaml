@@ -2,13 +2,13 @@
 
 light:
   - platform: colorlogic
-    entity_id: switch.pool_light_switch  # Your pool light switch
-    name: "Pool Light"
+    entity_id: switch.pool_light_switch  # Your existing pool light switch entity
+    name: "Pool Light"                   # This creates a new entity: light.pool_light
 
 button:
   - platform: colorlogic
-    entity_id: light.pool_light  # References the light entity above
-    name: "Pool Light"
+    entity_id: light.pool_light  # Must reference the light entity created above (NOT the switch!)
+    name: "Pool Light"           # This creates: button.pool_light_reset
 
 # Add this to your dashboard/lovelace configuration:
 # This defines the favorite colors that appear as preset buttons in the UI

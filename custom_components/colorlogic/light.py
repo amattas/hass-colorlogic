@@ -407,13 +407,14 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
         self._is_changing_mode = True
         
         try:
-            # Determine if we should reset or cycle forward
+            # Calculate cycles needed to reach target mode
             cycles_forward = target_mode - self._current_mode
             if cycles_forward < 0:
                 cycles_forward += 17
                 
-            # If it's more efficient to reset, do that
-            if cycles_forward > 10 or self._current_mode == 0:
+            # Reset is NEVER faster due to the long delays (3+ minutes)
+            # Only reset if we're in an unknown state (mode 0)
+            if self._current_mode == 0:
                 await self._reset_to_mode_1()
                 cycles_forward = target_mode - 1
             
