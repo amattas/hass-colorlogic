@@ -411,7 +411,9 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
                 "switch", "turn_on", {"entity_id": self._switch_entity_id}
             )
             self._is_on = True
-            
+        
+        self._is_changing_mode = True  # Prevent state updates during reset
+        
         # Step 2: Wait 60 seconds to ensure light has been on long enough
         _LOGGER.info("Waiting 60 seconds before reset sequence...")
         await asyncio.sleep(60)
@@ -432,7 +434,6 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
         
         # Step 6: Turn off for 2 minutes (light shouldn't respond during this time)
         _LOGGER.info("Turning off for 2 minutes to complete reset...")
-        self._is_changing_mode = True  # Prevent state updates during reset
         await self.hass.services.async_call(
             "switch", "turn_off", {"entity_id": self._switch_entity_id}
         )
