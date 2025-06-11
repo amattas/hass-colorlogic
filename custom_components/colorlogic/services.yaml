@@ -33,3 +33,15 @@ set_mode:
             - usa
             - mardi_gras
             - cool_cabaret
+
+reset:
+  name: Reset ColorLogic Light
+  description: Reset the ColorLogic light to mode 1 (voodoo_lounge) in case things get out of sync. This process takes about 3 minutes to complete.
+  fields:
+    entity_id:
+      name: Entity
+      description: Name of the ColorLogic light entity to reset
+      required: true
+      selector:
+        entity:
+          domain: light

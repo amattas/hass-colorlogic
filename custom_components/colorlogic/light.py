@@ -1,6 +1,7 @@
 """Hayward ColorLogic Light Component for Home Assistant."""
 import logging
 import asyncio
+import time
 from datetime import timedelta
 from typing import Any, Optional
 
@@ -34,16 +35,16 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 # ColorLogic modes mapping
 COLORLOGIC_MODES = {
     1: {"name": "voodoo_lounge", "type": "show"},
-    2: {"name": "deep_blue_sea", "type": "fixed", "rgb": (0, 0, 255)},
-    3: {"name": "royal_blue", "type": "fixed", "rgb": (65, 105, 225)},
-    4: {"name": "afternoon_skies", "type": "fixed", "rgb": (135, 206, 235)},
-    5: {"name": "aqua_green", "type": "fixed", "rgb": (0, 255, 212)},
-    6: {"name": "emerald", "type": "fixed", "rgb": (0, 201, 87)},
-    7: {"name": "cloud_white", "type": "fixed", "rgb": (255, 255, 255)},
-    8: {"name": "warm_red", "type": "fixed", "rgb": (255, 0, 0)},
-    9: {"name": "flamingo", "type": "fixed", "rgb": (255, 192, 203)},
-    10: {"name": "vivid_violet", "type": "fixed", "rgb": (138, 43, 226)},
-    11: {"name": "sangria", "type": "fixed", "rgb": (146, 0, 10)},
+    2: {"name": "deep_blue_sea", "type": "fixed", "rgb": (20, 76, 135)},
+    3: {"name": "royal_blue", "type": "fixed", "rgb": (7, 112, 174)},
+    4: {"name": "afternoon_skies", "type": "fixed", "rgb": (36, 190, 235)},
+    5: {"name": "aqua_green", "type": "fixed", "rgb": (20, 185, 187)},
+    6: {"name": "emerald", "type": "fixed", "rgb": (5, 161, 85)},
+    7: {"name": "cloud_white", "type": "fixed", "rgb": (176, 217, 243)},
+    8: {"name": "warm_red", "type": "fixed", "rgb": (233, 36, 50)},
+    9: {"name": "flamingo", "type": "fixed", "rgb": (240, 90, 124)},
+    10: {"name": "vivid_violet", "type": "fixed", "rgb": (166, 59, 120)},
+    11: {"name": "sangria", "type": "fixed", "rgb": (166, 59, 120)},
     12: {"name": "twilight", "type": "show"},
     13: {"name": "tranquility", "type": "show"},
     14: {"name": "gemstone", "type": "show"},
@@ -87,6 +88,9 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
         self._current_mode = 7  # Default to white
         self._rgb_color = COLORLOGIC_MODES[7]["rgb"]
         self._is_changing_mode = False
+        self._last_on_time = None
+        self._last_off_time = None
+        self._manual_changes_count = 0
         
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
@@ -119,13 +123,64 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
     def _async_switch_changed(self, event) -> None:
         """Handle switch state changes."""
         new_state = event.data.get("new_state")
+        old_state = event.data.get("old_state")
         if new_state is None:
             return
             
-        # Update our state if we're not currently changing modes
+        current_time = time.time()
+        is_on = new_state.state == "on"
+        
+        # Update our state if we're not currently changing modes programmatically
         if not self._is_changing_mode:
-            self._is_on = new_state.state == "on"
+            was_on = self._is_on
+            self._is_on = is_on
+            
+            if not was_on and is_on:
+                # Light turned on
+                if self._last_off_time and (current_time - self._last_off_time) < 2:
+                    # This was a quick off/on cycle - manual mode change
+                    self._manual_changes_count += 1
+                    
+                    # Advance to next mode
+                    self._current_mode = (self._current_mode % 17) + 1
+                    
+                    _LOGGER.info("Manual mode change detected (cycle #%d) - new mode: %d (%s)", 
+                                self._manual_changes_count, self._current_mode, 
+                                COLORLOGIC_MODES.get(self._current_mode, {}).get("name", "unknown"))
+                    
+                    # Update RGB if it's a fixed color mode
+                    mode_info = COLORLOGIC_MODES.get(self._current_mode, {})
+                    if "rgb" in mode_info:
+                        self._rgb_color = mode_info["rgb"]
+                else:
+                    # Normal turn on - reset manual change counter
+                    self._manual_changes_count = 0
+                    _LOGGER.debug("Light turned on normally, starting 60-second timer")
+                
+                # Always set the on time for protection
+                self._last_on_time = current_time
+                
+            elif was_on and not is_on:
+                # Light turned off
+                self._last_off_time = current_time
+                
+                # Check if this might be part of a mode change sequence
+                if self._last_on_time and (current_time - self._last_on_time) < 2:
+                    # Quick on/off - could be start of manual mode change
+                    _LOGGER.debug("Quick off detected, possible manual mode change incoming")
+                else:
+                    # Normal off - clear the on timer
+                    self._last_on_time = None
+                    
+                    # If off for more than 2 seconds, it might be a save operation
+                    if self._manual_changes_count > 0:
+                        _LOGGER.info("Mode saved after %d manual changes", self._manual_changes_count)
+                        self._manual_changes_count = 0
+                    
             self.async_write_ha_state()
+        else:
+            # We're in the middle of a programmatic change, just update internal state
+            self._is_on = is_on
 
     @property
     def name(self) -> str:
@@ -151,6 +206,26 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
     def supported_color_modes(self) -> set[ColorMode]:
         """Flag supported color modes."""
         return {ColorMode.RGB}
+    
+    @property
+    def brightness(self) -> None:
+        """Return the brightness of the light (always None as it's not dimmable)."""
+        return None
+    
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        # Light is unavailable while changing modes or resetting
+        if self._is_changing_mode:
+            return False
+            
+        # Light is unavailable for 60 seconds after being turned on
+        if self._last_on_time and self._is_on:
+            elapsed = time.time() - self._last_on_time
+            if elapsed < 60:
+                return False
+                
+        return True
     
     @property
     def supported_features(self) -> LightEntityFeature:
@@ -182,38 +257,80 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         mode_info = COLORLOGIC_MODES.get(self._current_mode, {})
-        return {
+        attrs = {
             "current_mode_number": self._current_mode,
             "current_mode_name": mode_info.get("name", "unknown"),
             "mode_type": mode_info.get("type", "unknown"),
+            "is_changing_mode": self._is_changing_mode,
         }
+        
+        # Add hex color code for fixed color modes
+        if mode_info.get("type") == "fixed" and "rgb" in mode_info:
+            r, g, b = mode_info["rgb"]
+            attrs["color_hex"] = f"#{r:02X}{g:02X}{b:02X}"
+        
+        # Add startup timer info
+        if self._last_on_time and self._is_on:
+            elapsed = time.time() - self._last_on_time
+            if elapsed < 60:
+                attrs["startup_timer_remaining"] = max(0, int(60 - elapsed))
+                attrs["can_change_mode"] = False
+            else:
+                attrs["can_change_mode"] = True
+        
+        # Add manual change tracking
+        if self._manual_changes_count > 0:
+            attrs["manual_changes_detected"] = self._manual_changes_count
+        
+        return attrs
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
-        self._is_on = True
+        # Check if we're already changing modes
+        if self._is_changing_mode:
+            _LOGGER.warning("Cannot change color/mode while already changing modes")
+            return
         
-        # Check if effect is specified
-        if ATTR_EFFECT in kwargs:
-            effect_name = kwargs[ATTR_EFFECT]
-            if effect_name in EFFECT_TO_MODE:
-                target_mode = EFFECT_TO_MODE[effect_name]
-                await self._change_to_mode(target_mode)
-        # If RGB color is specified, find closest mode
-        elif ATTR_RGB_COLOR in kwargs:
-            rgb = kwargs[ATTR_RGB_COLOR]
-            closest_mode = self._find_closest_color_mode(rgb)
-            await self._change_to_mode(closest_mode)
-        else:
-            # Just turn on the switch
+        # If light is being turned on (not already on), record the time
+        if not self._is_on:
+            self._last_on_time = time.time()
+            self._is_on = True
+            # Just turn on the switch first
             await self.hass.services.async_call(
                 "switch", "turn_on", {"entity_id": self._switch_entity_id}
             )
+            self.async_write_ha_state()
+            
+            # If color/effect change requested, we need to wait or reject
+            if ATTR_EFFECT in kwargs or ATTR_RGB_COLOR in kwargs:
+                _LOGGER.warning("Cannot change color/mode within 60 seconds of turning on")
+                return
+        else:
+            # Light is already on, check if we can change modes
+            if self._last_on_time:
+                elapsed = time.time() - self._last_on_time
+                if elapsed < 60:
+                    _LOGGER.warning("Cannot change color/mode within 60 seconds of turning on (%.1f seconds elapsed)", elapsed)
+                    return
+            
+            # Check if effect is specified
+            if ATTR_EFFECT in kwargs:
+                effect_name = kwargs[ATTR_EFFECT]
+                if effect_name in EFFECT_TO_MODE:
+                    target_mode = EFFECT_TO_MODE[effect_name]
+                    await self._change_to_mode(target_mode)
+            # If RGB color is specified, find closest mode
+            elif ATTR_RGB_COLOR in kwargs:
+                rgb = kwargs[ATTR_RGB_COLOR]
+                closest_mode = self._find_closest_color_mode(rgb)
+                await self._change_to_mode(closest_mode)
         
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the light off."""
         self._is_on = False
+        self._last_on_time = None  # Clear the timer when turning off
         await self.hass.services.async_call(
             "switch", "turn_off", {"entity_id": self._switch_entity_id}
         )
@@ -264,10 +381,7 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
             mode_info = COLORLOGIC_MODES.get(target_mode, {})
             if "rgb" in mode_info:
                 self._rgb_color = mode_info["rgb"]
-                
-            # Save the mode
-            await self._save_mode()
-            
+                          
             # Update Home Assistant state to persist
             self.async_write_ha_state()
             
@@ -291,37 +405,75 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
 
     async def _reset_to_mode_1(self) -> None:
         """Reset the light to mode 1."""
-        for _ in range(3):
-            # Turn off for 13 seconds
-            await self.hass.services.async_call(
-                "switch", "turn_off", {"entity_id": self._switch_entity_id}
-            )
-            await asyncio.sleep(13)
-            
-            # Turn on for 2 seconds
+        # Step 1: Turn on if not already on
+        if not self._is_on:
             await self.hass.services.async_call(
                 "switch", "turn_on", {"entity_id": self._switch_entity_id}
             )
-            await asyncio.sleep(2)
+            self._is_on = True
             
-        self._current_mode = 1
-        self.async_write_ha_state()
-
-    async def _save_mode(self) -> None:
-        """Save the current mode by turning off for 2+ seconds."""
-        # Turn off
+        # Step 2: Wait 60 seconds to ensure light has been on long enough
+        _LOGGER.info("Waiting 60 seconds before reset sequence...")
+        await asyncio.sleep(60)
+        
+        # Step 3: Turn off for 11-13 seconds
         await self.hass.services.async_call(
             "switch", "turn_off", {"entity_id": self._switch_entity_id}
         )
-        await asyncio.sleep(2.5)
+        await asyncio.sleep(12)  # Middle of 11-13 range
         
-        # Turn back on
+        # Step 4: Turn back on immediately
         await self.hass.services.async_call(
             "switch", "turn_on", {"entity_id": self._switch_entity_id}
         )
+        
+        # Step 5: Wait for confirmation (give it a moment to register)
+        await asyncio.sleep(2)
+        
+        # Step 6: Turn off for 2 minutes (light shouldn't respond during this time)
+        _LOGGER.info("Turning off for 2 minutes to complete reset...")
+        self._is_changing_mode = True  # Prevent state updates during reset
+        await self.hass.services.async_call(
+            "switch", "turn_off", {"entity_id": self._switch_entity_id}
+        )
+        await asyncio.sleep(120)  # 2 minutes
+        
+        # Reset complete
+        self._current_mode = 1
+        self._is_on = False
+        self._is_changing_mode = False
+        _LOGGER.info("Reset complete. Light is now at mode 1.")
+        self.async_write_ha_state()
 
     async def set_mode_by_name(self, mode_name: str) -> None:
         """Set mode by name (for use in services)."""
+        if self._is_changing_mode:
+            _LOGGER.warning("Cannot change mode while already changing modes")
+            return
+        
+        # Check 60-second startup timer
+        if self._last_on_time and self._is_on:
+            elapsed = time.time() - self._last_on_time
+            if elapsed < 60:
+                _LOGGER.warning("Cannot change mode within 60 seconds of turning on (%.1f seconds elapsed)", elapsed)
+                return
+            
         if mode_name in MODE_NAME_TO_NUMBER:
             await self._change_to_mode(MODE_NAME_TO_NUMBER[mode_name])
             self.async_write_ha_state()
+    
+    async def reset_to_mode_1(self) -> None:
+        """Public method to reset the light to mode 1."""
+        if self._is_changing_mode:
+            _LOGGER.warning("Cannot reset while already changing modes")
+            return
+        
+        # Check 60-second startup timer
+        if self._last_on_time and self._is_on:
+            elapsed = time.time() - self._last_on_time
+            if elapsed < 60:
+                _LOGGER.warning("Cannot reset within 60 seconds of turning on (%.1f seconds elapsed)", elapsed)
+                return
+            
+        await self._reset_to_mode_1()
+        self.async_write_ha_state()

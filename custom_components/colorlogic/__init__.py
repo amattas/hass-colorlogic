@@ -22,7 +22,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if entity and hasattr(entity, "set_mode_by_name"):
             await entity.set_mode_by_name(mode)
     
-    # Register the service
+    async def handle_reset(call: ServiceCall) -> None:
+        """Handle the reset service call."""
+        entity_id = call.data.get("entity_id")
+        
+        # Get the entity
+        entity = hass.data.get("light", {}).get(entity_id)
+        if entity and hasattr(entity, "reset_to_mode_1"):
+            await entity.reset_to_mode_1()
+    
+    # Register the services
     hass.services.async_register(DOMAIN, "set_mode", handle_set_mode)
+    hass.services.async_register(DOMAIN, "reset", handle_reset)
     
     return True
