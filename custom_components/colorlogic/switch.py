@@ -23,30 +23,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 
-async def async_setup_platform(
-    hass: HomeAssistant,
-    config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None
-) -> None:
-    """Set up the Hayward ColorLogic Power Light platform from YAML."""
-    entity_id = config[CONF_ENTITY_ID]
-    name = config[CONF_NAME]
-    
-    async_add_entities([HaywardColorLogicPowerLight(hass, name, entity_id)], True)
-
-
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the Hayward ColorLogic Power Light platform from config entry."""
-    # The power light references the main light entity that was created
-    light_entity_id = f"light.{config_entry.data[CONF_NAME].lower().replace(' ', '_')}"
-    name = config_entry.data[CONF_NAME]
-    
-    async_add_entities([HaywardColorLogicPowerLight(hass, name, light_entity_id)], True)
+# Note: This file only contains the HaywardColorLogicPowerLight class.
+# The light entities are created by light.py, not by this platform directly.
 
 
 class HaywardColorLogicPowerLight(LightEntity):
@@ -65,36 +43,35 @@ class HaywardColorLogicPowerLight(LightEntity):
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
-        # Determine the RGB light entity ID
+        # Track the physical switch state changes directly
+        async_track_state_change_event(
+            self.hass, [self._switch_entity_id], self._async_switch_changed
+        )
+        
+        # Get initial state from the physical switch
+        switch_state = self.hass.states.get(self._switch_entity_id)
+        if switch_state:
+            self._is_on = switch_state.state == "on"
+            self._is_available = switch_state.state not in ["unavailable", "unknown"]
+        
+        # Also determine the RGB light entity ID for availability tracking
         if self._entry_id:
             # For config entries, the RGB light will have _rgb suffix
             base_name = self._name.lower().replace(' ', '_')
             self._rgb_light_entity_id = f"light.{base_name}_rgb"
         else:
-            # For YAML config, track the referenced entity
-            self._rgb_light_entity_id = self._switch_entity_id
-        
-        # Track RGB light state changes
-        if self._rgb_light_entity_id:
-            async_track_state_change_event(
-                self.hass, [self._rgb_light_entity_id], self._async_light_changed
-            )
-            
-            # Get initial state
-            light_state = self.hass.states.get(self._rgb_light_entity_id)
-            if light_state:
-                self._is_on = light_state.state == "on"
-                self._is_available = light_state.state != "unavailable"
+            # For YAML config
+            self._rgb_light_entity_id = None
 
     @callback
-    def _async_light_changed(self, event) -> None:
-        """Handle light state changes."""
+    def _async_switch_changed(self, event) -> None:
+        """Handle switch state changes."""
         new_state = event.data.get("new_state")
         if new_state is None:
             return
             
         self._is_on = new_state.state == "on"
-        self._is_available = new_state.state != "unavailable"
+        self._is_available = new_state.state not in ["unavailable", "unknown"]
         self.async_write_ha_state()
 
     @property
@@ -112,6 +89,10 @@ class HaywardColorLogicPowerLight(LightEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the light is on."""
+        # Always use the physical switch state
+        switch_state = self.hass.states.get(self._switch_entity_id)
+        if switch_state:
+            return switch_state.state == "on"
         return self._is_on
     
     @property

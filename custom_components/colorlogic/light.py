@@ -74,7 +74,13 @@ async def async_setup_platform(
     entity_id = config[CONF_ENTITY_ID]
     name = config[CONF_NAME]
     
-    async_add_entities([HaywardColorLogicLight(hass, name, entity_id)], True)
+    # For YAML, create both lights similar to config entry
+    rgb_light = HaywardColorLogicLight(hass, name, entity_id)
+    
+    from .switch import HaywardColorLogicPowerLight
+    power_light = HaywardColorLogicPowerLight(hass, f"{name} Power", entity_id)
+    
+    async_add_entities([rgb_light, power_light], True)
 
 
 async def async_setup_entry(

@@ -43,14 +43,12 @@ This will automatically create:
 light:
   - platform: colorlogic
     entity_id: switch.pool_light_switch  # Your existing pool light switch
-    name: "Pool Light"                   # This creates light.pool_light (RGB)
+    name: "Pool Light"                   # Creates both lights automatically
 
 button:
   - platform: colorlogic
-    entity_id: light.pool_light  # References the RGB light entity created above
-    name: "Pool Light"           # This creates button.pool_light_reset and button.pool_light_next_color
-
-# Note: The simple on/off light is created automatically with YAML config
+    entity_id: light.pool_light  # References the RGB light entity
+    name: "Pool Light"           # Creates both button entities
 ```
 
 ## Lovelace Card Configuration
