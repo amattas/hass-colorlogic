@@ -45,10 +45,11 @@ favorite_colors:
   - rgb_color: [36, 190, 235]   # Afternoon Skies
   - rgb_color: [20, 185, 187]   # Aqua Green
   - rgb_color: [5, 161, 85]     # Emerald
-  - rgb_color: [176, 217, 243]  # Cloud White
+  - rgb_color: [228, 242, 251]  # Cloud White
   - rgb_color: [233, 36, 50]    # Warm Red
   - rgb_color: [240, 90, 124]   # Flamingo
-  - rgb_color: [166, 59, 120]   # Vivid Violet/Sangria
+  - rgb_color: [170, 82, 130]   # Vivid Violet
+  - rgb_color: [124, 74, 149]   # Sangria
 ```
 
 ### Option 2: Entities Card with Color Buttons
@@ -97,11 +98,11 @@ cards:
 3. Afternoon Skies (#24BEEB)
 4. Aqua Green (#14B9BB)
 5. Emerald (#05A155)
-6. Cloud White (#B0D9F3)
+6. Cloud White (#E4F2FB)
 7. Warm Red (#E92432)
 8. Flamingo (#F05A7C)
-9. Vivid Violet (#A63B78)
-10. Sangria (#A63B78)
+9. Vivid Violet (#AA5282)
+10. Sangria (#7C4A95)
 
 ### Light Shows
 1. Voodoo Lounge
