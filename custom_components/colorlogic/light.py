@@ -209,6 +209,8 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
     @property
     def unique_id(self) -> str:
         """Return unique ID for the light."""
+        if self._entry_id:
+            return f"{self._entry_id}_light"
         return f"colorlogic_{self._switch_entity_id}"
 
     @property

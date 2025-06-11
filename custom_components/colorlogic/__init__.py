@@ -16,7 +16,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Hayward ColorLogic component."""
     
     # Store our light entities
-    hass.data[DOMAIN] = {"entities": {}}
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {"entities": {}}
     
     async def handle_set_mode(call: ServiceCall) -> None:
         """Handle the set_mode service call."""
@@ -67,10 +68,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             else:
                 _LOGGER.error("Entity %s not found or doesn't support next_mode", entity_id)
     
-    # Register the services
-    hass.services.async_register(DOMAIN, "set_mode", handle_set_mode)
-    hass.services.async_register(DOMAIN, "reset", handle_reset)
-    hass.services.async_register(DOMAIN, "next_mode", handle_next_mode)
+    # Register the services only once
+    if not hass.services.has_service(DOMAIN, "set_mode"):
+        hass.services.async_register(DOMAIN, "set_mode", handle_set_mode)
+        hass.services.async_register(DOMAIN, "reset", handle_reset)
+        hass.services.async_register(DOMAIN, "next_mode", handle_next_mode)
     
     return True
 
