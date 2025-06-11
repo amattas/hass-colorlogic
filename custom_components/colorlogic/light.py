@@ -86,7 +86,14 @@ async def async_setup_entry(
     entity_id = config_entry.data[CONF_ENTITY_ID]
     name = config_entry.data[CONF_NAME]
     
-    async_add_entities([HaywardColorLogicLight(hass, name, entity_id, config_entry.entry_id)], True)
+    # Create RGB light with _rgb suffix
+    rgb_light = HaywardColorLogicLight(hass, f"{name} RGB", entity_id, config_entry.entry_id)
+    
+    # Create simple on/off light
+    from .switch import HaywardColorLogicPowerLight
+    power_light = HaywardColorLogicPowerLight(hass, name, entity_id, config_entry.entry_id)
+    
+    async_add_entities([rgb_light, power_light], True)
 
 
 class HaywardColorLogicLight(LightEntity, RestoreEntity):

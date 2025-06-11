@@ -9,7 +9,7 @@ from homeassistant.helpers.typing import ConfigType
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "colorlogic"
-PLATFORMS = [Platform.LIGHT, Platform.BUTTON, Platform.SWITCH]
+PLATFORMS = [Platform.LIGHT, Platform.BUTTON]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

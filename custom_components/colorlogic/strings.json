@@ -11,7 +11,7 @@
         },
         "data_description": {
           "entity_id": "Select the existing switch entity that controls your ColorLogic light",
-          "name": "Name for the ColorLogic light (will create light, switch, and button entities)"
+          "name": "Name for the ColorLogic light (creates light.<name> for on/off and light.<name>_rgb for colors)"
         }
       }
     },

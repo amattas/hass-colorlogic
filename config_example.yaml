@@ -13,7 +13,7 @@ button:
 switch:
   - platform: colorlogic
     entity_id: light.pool_light  # Must reference the light entity created above
-    name: "Pool Light"           # This creates: switch.pool_light_power
+    name: "Pool Light"           # This creates: light.pool_light_power
 
 # Add this to your dashboard/lovelace configuration:
 # This defines the favorite colors that appear as preset buttons in the UI

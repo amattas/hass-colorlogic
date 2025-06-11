@@ -6,8 +6,8 @@ Home Assistant integration for Hayward ColorLogic pool lights
 - Support for all 17 ColorLogic modes (10 fixed colors + 7 light shows)
 - Automatic mode tracking when manually toggling the switch
 - Separate entities for different control needs:
-  - Switch entity for simple on/off control
-  - Light entity for color/mode selection
+  - Power light entity for simple on/off control (no color UI)
+  - Main light entity for color/mode selection
   - Next button to cycle through modes
   - Reset button to sync back to mode 1 (Voodoo Lounge)
 - Protection timers to ensure reliable operation
@@ -31,8 +31,8 @@ Home Assistant integration for Hayward ColorLogic pool lights
 5. Give it a name (e.g., "Pool Light")
 
 This will automatically create:
-- `light.pool_light` - Full color control
-- `switch.pool_light_power` - Simple on/off
+- `light.pool_light` - Simple on/off control (no color features)
+- `light.pool_light_rgb` - Full RGB color control and effects
 - `button.pool_light_next_color` - Cycle through modes
 - `button.pool_light_reset` - Reset to mode 1
 
@@ -43,17 +43,14 @@ This will automatically create:
 light:
   - platform: colorlogic
     entity_id: switch.pool_light_switch  # Your existing pool light switch
-    name: "Pool Light"                   # This creates light.pool_light
+    name: "Pool Light"                   # This creates light.pool_light (RGB)
 
 button:
   - platform: colorlogic
-    entity_id: light.pool_light  # References the light entity created above (NOT the switch)
+    entity_id: light.pool_light  # References the RGB light entity created above
     name: "Pool Light"           # This creates button.pool_light_reset and button.pool_light_next_color
 
-switch:
-  - platform: colorlogic
-    entity_id: light.pool_light  # References the light entity created above
-    name: "Pool Light"           # This creates switch.pool_light_power (on/off only)
+# Note: The simple on/off light is created automatically with YAML config
 ```
 
 ## Lovelace Card Configuration
@@ -85,9 +82,9 @@ For a more compact view with all controls:
 ```yaml
 type: entities
 entities:
-  - entity: switch.pool_light_power
-    name: Power On/Off
   - entity: light.pool_light
+    name: Power On/Off
+  - entity: light.pool_light_rgb
     name: Color Control
   - entity: button.pool_light_next_color
     name: Next Color/Mode

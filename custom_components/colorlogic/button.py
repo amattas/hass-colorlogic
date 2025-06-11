@@ -45,8 +45,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Hayward ColorLogic Button platform from config entry."""
-    # The button references the light entity that was created
-    light_entity_id = f"light.{config_entry.data[CONF_NAME].lower().replace(' ', '_')}"
+    # The button references the RGB light entity that was created
+    light_entity_id = f"light.{config_entry.data[CONF_NAME].lower().replace(' ', '_')}_rgb"
     name = config_entry.data[CONF_NAME]
     
     async_add_entities([
