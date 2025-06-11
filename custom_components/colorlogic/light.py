@@ -94,6 +94,11 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
         
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
+        # Register this entity with the domain
+        if DOMAIN in self.hass.data and "entities" in self.hass.data[DOMAIN]:
+            self.hass.data[DOMAIN]["entities"][self.entity_id] = self
+            _LOGGER.debug("Registered ColorLogic entity: %s", self.entity_id)
+        
         # Restore previous state
         last_state = await self.async_get_last_state()
         if last_state is not None:

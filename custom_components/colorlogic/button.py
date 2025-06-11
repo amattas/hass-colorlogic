@@ -89,15 +89,10 @@ class HaywardColorLogicResetButton(ButtonEntity):
                 _LOGGER.error("Light entity %s not found", self._light_entity_id)
                 return
             
-            # Call the reset method on the light entity
-            light = self.hass.data.get("light", {}).get(self._light_entity_id)
-            if light and hasattr(light, "reset_to_mode_1"):
-                await light.reset_to_mode_1()
-            else:
-                # If we can't access the entity directly, use the service
-                await self.hass.services.async_call(
-                    DOMAIN, "reset", {"entity_id": self._light_entity_id}
-                )
+            # Use the service to reset the light
+            await self.hass.services.async_call(
+                DOMAIN, "reset", {"entity_id": self._light_entity_id}, blocking=True
+            )
         finally:
             self._is_resetting = False
             self.async_write_ha_state()
