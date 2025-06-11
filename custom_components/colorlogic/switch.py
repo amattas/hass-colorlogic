@@ -116,7 +116,7 @@ class HaywardColorLogicSwitch(SwitchEntity):
     @property
     def icon(self) -> str:
         """Return the icon to use for the switch."""
-        return "mdi:lightbulb" if self._is_on else "mdi:lightbulb-outline"
+        return "mdi:lightbulb"
     
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
