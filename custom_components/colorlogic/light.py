@@ -236,6 +236,15 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
     def supported_features(self) -> LightEntityFeature:
         """Flag supported features."""
         return LightEntityFeature.EFFECT
+    
+    @property
+    def hs_color(self) -> tuple[float, float] | None:
+        """Return the hue and saturation color value [float, float]."""
+        # Convert RGB to HS to ensure color wheel shows exact colors
+        if self._rgb_color:
+            from homeassistant.util import color as color_util
+            return color_util.color_RGB_to_hs(*self._rgb_color)
+        return None
 
     @property
     def rgb_color(self) -> tuple[int, int, int]:
@@ -287,6 +296,18 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
         if self._manual_changes_count > 0:
             attrs["manual_changes_detected"] = self._manual_changes_count
         
+        # Add supported colors for UI
+        supported_colors = []
+        for mode_num, mode_data in COLORLOGIC_MODES.items():
+            if mode_data["type"] == "fixed":
+                r, g, b = mode_data["rgb"]
+                supported_colors.append({
+                    "name": mode_data["name"].replace("_", " ").title(),
+                    "rgb": [r, g, b],
+                    "hex": f"#{r:02X}{g:02X}{b:02X}"
+                })
+        attrs["supported_colors"] = supported_colors
+        
         return attrs
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -328,6 +349,20 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
             elif ATTR_RGB_COLOR in kwargs:
                 rgb = kwargs[ATTR_RGB_COLOR]
                 closest_mode = self._find_closest_color_mode(rgb)
+                
+                # Log the color mapping for user feedback
+                mode_info = COLORLOGIC_MODES.get(closest_mode, {})
+                if mode_info and "rgb" in mode_info:
+                    selected_hex = f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}"
+                    mapped_rgb = mode_info["rgb"]
+                    mapped_hex = f"#{mapped_rgb[0]:02X}{mapped_rgb[1]:02X}{mapped_rgb[2]:02X}"
+                    _LOGGER.info(
+                        "Color %s mapped to %s (%s)", 
+                        selected_hex, 
+                        mode_info["name"].replace("_", " ").title(),
+                        mapped_hex
+                    )
+                
                 await self._change_to_mode(closest_mode)
         
         self.async_write_ha_state()
