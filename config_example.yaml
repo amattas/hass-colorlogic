@@ -1,0 +1,27 @@
+# Example configuration for ColorLogic light with favorite colors
+
+light:
+  - platform: colorlogic
+    entity_id: switch.pool_light_switch  # Your pool light switch
+    name: "Pool Light"
+
+button:
+  - platform: colorlogic
+    entity_id: light.pool_light  # References the light entity above
+    name: "Pool Light"
+
+# Add this to your dashboard/lovelace configuration:
+# This defines the favorite colors that appear as preset buttons in the UI
+type: light
+entity: light.pool_light
+favorite_colors:
+  - rgb_color: [20, 76, 135]    # Deep Sea Blue
+  - rgb_color: [7, 112, 174]    # Royal Blue
+  - rgb_color: [36, 190, 235]   # Afternoon Skies
+  - rgb_color: [20, 185, 187]   # Aqua Green
+  - rgb_color: [5, 161, 85]     # Emerald
+  - rgb_color: [176, 217, 243]  # Cloud White
+  - rgb_color: [233, 36, 50]    # Warm Red
+  - rgb_color: [240, 90, 124]   # Flamingo
+  - rgb_color: [166, 59, 120]   # Vivid Violet
+  - rgb_color: [166, 59, 120]   # Sangria (same as Vivid Violet)

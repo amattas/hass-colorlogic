@@ -85,8 +85,8 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
         self._name = name
         self._switch_entity_id = switch_entity_id
         self._is_on = False
-        self._current_mode = 7  # Default to white
-        self._rgb_color = COLORLOGIC_MODES[7]["rgb"]
+        self._current_mode = 1  # Default to voodoo_lounge (show mode)
+        self._rgb_color = None  # No RGB for show modes
         self._is_changing_mode = False
         self._last_on_time = None
         self._last_off_time = None
@@ -247,9 +247,13 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
         return None
 
     @property
-    def rgb_color(self) -> tuple[int, int, int]:
+    def rgb_color(self) -> tuple[int, int, int] | None:
         """Return the rgb color value."""
-        return self._rgb_color
+        # Return None for show modes, RGB for fixed color modes
+        mode_info = COLORLOGIC_MODES.get(self._current_mode, {})
+        if mode_info.get("type") == "fixed":
+            return self._rgb_color
+        return None
     
     @property
     def effect_list(self) -> list[str]:
@@ -379,7 +383,7 @@ class HaywardColorLogicLight(LightEntity, RestoreEntity):
     def _find_closest_color_mode(self, target_rgb: tuple[int, int, int]) -> int:
         """Find the closest ColorLogic mode for a given RGB color."""
         min_distance = float('inf')
-        closest_mode = 7  # Default to white
+        closest_mode = 7  # Default to cloud_white if no match found
         
         for mode_num, mode_info in COLORLOGIC_MODES.items():
             if mode_info["type"] != "fixed":
