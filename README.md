@@ -1,3 +1,5 @@
+> This package is no longer being maintained, as I have found these lights to be extremely problematic. 
+
 # hass-colorlogic
 Home Assistant integration for Hayward ColorLogic pool lights
 
